@@ -7,7 +7,6 @@ import (
     "io/ioutil"
     "os"
     "io"
-    "io/ioutil"
 )
 
 //var count int
@@ -24,7 +23,7 @@ func main() {
         go fetch(url, ch) // arranca la go routine -> fetch de las urls que mande por parametro
     }
     for range os.Args[1:]{
-        fmt.Println(<-ch) // recibe todo lo que venga de ch
+        fmt.Println(<-ch) // recibe lo que venga de ch
     }
 
 }
