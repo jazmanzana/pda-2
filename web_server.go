@@ -4,6 +4,7 @@ import (
     "fmt"
     //"log"
     "net/http"
+    "io/ioutil"
     "os"
     "io"
     "io/ioutil"
@@ -14,6 +15,8 @@ import (
 func main() {
  /*   http.HandleFunc("/count", counter)
     http.HandleFunc("/", handler)
+    http.HandleFunc("/count", counter)
+    log.Fatal(http.ListenAndServe("localhost:8000", nil))
     log.Fatal(http.ListenAndServe("localhost:8000", nil)) */
 
     ch := make(chan string)
@@ -46,6 +49,7 @@ func fetch(url string, ch chan<- string){
 func handler(w http.ResponseWriter, r *http.Request) {
     count++
     fmt.Fprintf(w, "URL.Path = %q\n", r.URL.Path)
+    fmt.Fprintf(w, "Count %d\n", count)
     fmt.Fprintf(w, "http.Request = %q\n", r)
 }
 
