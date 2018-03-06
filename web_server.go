@@ -2,29 +2,26 @@ package main
 
 import (
     "fmt"
-    //"log"
+    "log"
     "net/http"
     "io/ioutil"
-    "os"
+    //"os"
     "io"
+    "strings"
 )
 
-//var count int
-
 func main() {
- /*   http.HandleFunc("/count", counter)
     http.HandleFunc("/", handler)
-    http.HandleFunc("/count", counter)
     log.Fatal(http.ListenAndServe("localhost:8000", nil))
-    log.Fatal(http.ListenAndServe("localhost:8000", nil)) */
 
+/*
     ch := make(chan string)
     for _, url := range os.Args[1:]{
         go fetch(url, ch) // arranca la go routine -> fetch de las urls que mande por parametro
     }
     for range os.Args[1:]{
-        fmt.Println(<-ch) // recibe lo que venga de ch
-    }
+        fmt.Println(<-ch) // recibe lo que venga de ch 
+        }*/
 
 }
 
@@ -44,15 +41,13 @@ func fetch(url string, ch chan<- string){
     ch <- fmt.Sprintf("Esto vendria a ser lo que recibimos: %d de la url %s", nbytes, url)
 }
 
-/*
+
 func handler(w http.ResponseWriter, r *http.Request) {
-    count++
-    fmt.Fprintf(w, "URL.Path = %q\n", r.URL.Path)
-    fmt.Fprintf(w, "Count %d\n", count)
-    fmt.Fprintf(w, "http.Request = %q\n", r)
+    ch := make(chan string)
+    dominio := "https://api.mercadolibre.com"
+    my_url := strings.Join([]string{dominio, r.URL.Path}, "")
+    fmt.Println("Entraste a handler por la url %s", my_url)
+    fetch(my_url, ch)
 }
 
-func counter(w http.ResponseWriter, r *http.Request){
-    fmt.Fprintf(w, "Count %d\n", count)
-}
-*/
+
