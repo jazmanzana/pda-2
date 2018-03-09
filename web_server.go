@@ -20,6 +20,7 @@ type client struct {
 
 func main() {
 	http.HandleFunc("/", handler)
+    http.HandleFunc("/statistics", get_statistics) //para las estadisticas luego
 	log.Fatal(http.ListenAndServe("0.0.0.0:8000", nil))
 }
 
@@ -41,6 +42,7 @@ func fetch(url string, writer http.ResponseWriter) error {
 	if err != nil {
         return err
 	}
+
 	writer.Write(body_bytes)
 	resp.Body.Close() // "dont leak resources"
 
@@ -48,12 +50,27 @@ func fetch(url string, writer http.ResponseWriter) error {
 }
 
 func handler(writer http.ResponseWriter, request *http.Request) {
+    // chequeo que este cliente pueda hacer el fetch segun mis restricciones
+    err := request_restrictions(writer, request)
+    if err != nil {
+        return // salgo
+    }
+
 	dominio := "https://api.mercadolibre.com"
 	my_url := strings.Join([]string{dominio, request.URL.Path}, "")
-	err := fetch(my_url, writer)
+	err = fetch(my_url, writer) // piso el err
+
     if err != nil {
         fmt.Fprint(writer, err.Error()) // S: resultado string, f: formato
         return // salgo
     }
 	//request.Write(writer) // este metodo es parte de request, en contraposicion al otro
+}
+
+func request_restrictions(writer http.ResponseWriter, request *http.Request) error {
+    return nil
+}
+
+func get_statistics(writer http.ResponseWriter, request *http.Request) {
+    fmt.Fprintf(writer, "Coming soon!")
 }
