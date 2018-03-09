@@ -15,14 +15,13 @@ lo que suecede es que puedo usar el struct Client desde otros modulos.
 Si estuviese en minuscula le cambia el scope a este lugar. */
 type Restrict struct {
     URL_Count int
-    URL_Time time.Time
+    URL_Time string
 }
 
 type Client struct {
-	Remote_Addr string         //ip del chabon, no me sirve aca porque ya tengo la referencia en clients
+	Remote_Addr string         //no me sirve aca porque ya tengo la referencia a la ip en clients -key-
 	URL_Path    map[string]Restrict // my key es el path, mi valor es el {counter, date}
 }
-
 
 var clients map[string]*Client
 
@@ -44,6 +43,7 @@ func fetch(url string, writer http.ResponseWriter) error {
 		writer.WriteHeader(resp.StatusCode)
 		return errors.New(fmt.Sprintf("The request failed with %v.", resp.StatusCode))
 	}
+
 	// porque a los arrays les tengo que fijar el tamanio de entrada
 	body_bytes := make([]byte, resp.ContentLength)
 
@@ -78,7 +78,7 @@ func handler(writer http.ResponseWriter, request *http.Request) {
 
 func request_restrictions(writer http.ResponseWriter, request *http.Request) error { //usar mutex aca para que bloquee
     var mutex = &sync.Mutex{} // para que clients sea modificado de a un client por vez
-    request_time := time.Now()
+    request_time := time.Now().Format(time.UnixDate)
 
 	client_data, ok := clients[request.RemoteAddr]
 	if !ok { // si no lo encuentra, lo crea
@@ -103,19 +103,36 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
 	}
 
 	fmt.Println(clients[request.RemoteAddr].URL_Path[request.URL.Path])
+
+    // si deja pasar 60 segundos entre llamadas, se resetea el counter
+    if reset_counter(clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Time) {
+        clients[request.RemoteAddr].URL_Path[request.URL.Path] = Restrict{0, request_time}
+    }
+
 	if clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Count == 5 {
-		// cuando vuelvo el count a 0? necesito un timer
 		// me gustaria que para la 6ta le ponga un timer mas grande antes de devolver el mensaje
+
 		fmt.Fprintf(writer, "Muchas requests para esta url, intente mas tarde.")
 		return errors.New(fmt.Sprintf("Hola, soy un mensaje de error poco claro."))
 	} else {
         mutex.Lock()
-		clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Count ++
+
+        fmt.Println("ASDF") //no hay count por ahora x(
+		//clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Count ++
+
         mutex.Unlock()
 	}
 	fmt.Println(client_data)
 
 	return nil
+}
+
+func reset_counter(struct_time string) bool { // si paso mas de t tiempo entre las fechas, true
+    first_time, _ := http.ParseTime(struct_time)
+    if time.Since(first_time) < 60 { //si intentaste en menos de 60 segundos 
+        return false
+    }
+    return true
 }
 
 func get_statistics(writer http.ResponseWriter, request *http.Request) {
