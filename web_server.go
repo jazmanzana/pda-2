@@ -21,7 +21,8 @@ type Restrict struct {
 
 type Client struct {
 	IP_Count int
-	URL_Path    map[string]Restrict // my key es el path, mi valor es el {counter, date}
+	IP_Time  string
+	URL_Path map[string]Restrict // my key es el path, mi valor es el {counter, date}
 }
 
 var clients map[string]*Client
@@ -88,7 +89,8 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
 		mutex.Lock()
 		clients[client_ip] = &Client{ //hacer que el key no tenga el puerto
 			IP_Count: 1,
-			URL_Path:    make(map[string]Restrict)}
+			IP_Time:  request_time,
+			URL_Path: make(map[string]Restrict)}
 
 		clients[client_ip].URL_Path[requested_url] = Restrict{1, request_time} //inicializa el path y pone el counter en 1
 		mutex.Unlock()
@@ -99,28 +101,38 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
 	_, ok = clients[client_ip].URL_Path[requested_url]
 	if !ok { // si mi path no existe en mi client, lo crea
 		mutex.Lock()
-		clients[client_ip].IP_Count ++
+		clients[client_ip].IP_Count++
 		clients[client_ip].URL_Path[requested_url] = Restrict{1, request_time}
 		mutex.Unlock()
 		fmt.Println("URL_Path no existia.")
 		return nil // no existia, no hay restricciones
 	}
 
+	// si deja pasar 60 segundos entre llamadas desde la misma ip, se resetea el counter y se pisa la fecha
+	if reset_counter(clients[client_ip].IP_Time, request_time, 60) {
+		mutex.Lock()
+		clients[client_ip].IP_Time = request_time
+		clients[client_ip].IP_Count = 0
+		mutex.Unlock()
+	}
 
-	// si deja pasar 60 segundos entre llamadas, se resetea el counter y se pisa la fecha
-	if reset_counter(clients[client_ip].URL_Path[requested_url].URL_Time, request_time) {
+	// si deja pasar 15 segundos entre llamadas al mismo path, se resetea el counter y se pisa la fecha
+	if reset_counter(clients[client_ip].URL_Path[requested_url].URL_Time, request_time, 15) {
 		mutex.Lock()
 		clients[client_ip].URL_Path[requested_url] = Restrict{0, request_time}
 		mutex.Unlock()
 	}
 
 	if clients[client_ip].URL_Path[requested_url].URL_Count == 5 {
-		// me gustaria que para la 6ta le ponga un timer mas grande antes de devolver el mensaje
 		fmt.Fprintf(writer, "Muchas requests en poco tiempo para esta url, intente mas tarde.")
-		return errors.New(fmt.Sprintf("Hola, soy un mensaje de error poco claro."))
+		return errors.New(fmt.Sprintf("Too many requests for the same path."))
+
+	} else if clients[client_ip].IP_Count == 10 {
+		fmt.Fprintf(writer, "Muchas requests en poco tiempo desde la misma ip, intente mas tarde.")
+		return errors.New(fmt.Sprintf("Too many requests from the same client."))
 	} else {
 		mutex.Lock()
-		clients[client_ip].IP_Count ++
+		clients[client_ip].IP_Count++
 		modified_strict := Restrict{
 			clients[client_ip].URL_Path[requested_url].URL_Count + 1,
 			clients[client_ip].URL_Path[requested_url].URL_Time}
@@ -132,11 +144,11 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
 	return nil
 }
 
-func reset_counter(struct_time string, request_time string) bool { // si paso mas de t tiempo entre las fechas, true
+func reset_counter(struct_time string, request_time string, limit int64) bool { // si paso mas de t tiempo entre las fechas, true
 	const date_format = "Mon Jan  2 15:04:05 -07 2006"
 	first_time, _ := time.Parse(date_format, struct_time)
 	last_time, _ := time.Parse(date_format, request_time)
-	if int64(last_time.Sub(first_time)/time.Second) < 15 { //lo pongo en 15 para testear rapido
+	if int64(last_time.Sub(first_time)/time.Second) < limit { //lo pongo en 15 para testear rapido
 		return false
 	} else {
 		return true
