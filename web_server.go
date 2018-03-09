@@ -20,7 +20,7 @@ type Restrict struct {
 }
 
 type Client struct {
-	Remote_Addr string              //no me sirve aca porque ya tengo la referencia a la ip en clients -key-
+	IP_Count int
 	URL_Path    map[string]Restrict // my key es el path, mi valor es el {counter, date}
 }
 
@@ -87,7 +87,7 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
 	if !ok { // si no lo encuentra, lo crea
 		mutex.Lock()
 		clients[client_ip] = &Client{ //hacer que el key no tenga el puerto
-			Remote_Addr: client_ip,
+			IP_Count: 1,
 			URL_Path:    make(map[string]Restrict)}
 
 		clients[client_ip].URL_Path[requested_url] = Restrict{1, request_time} //inicializa el path y pone el counter en 1
