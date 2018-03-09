@@ -83,17 +83,24 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
         return nil // si no existia no hay restricciones
     }
     
-    my_count, ok := clients[request.RemoteAddr].URL_Path[request.URL.Path]
+    _, ok = clients[request.RemoteAddr].URL_Path[request.URL.Path]
     if !ok { // si mi path no existe en mi client, lo crea
         clients[request.RemoteAddr].URL_Path[request.URL.Path] = 1
         fmt.Println("URL_Path no existia.")
         return nil // no existia, no hay restricciones
     }
 
-    clients[request.RemoteAddr].URL_Path[request.URL.Path] ++
-    
+    fmt.Println(clients[request.RemoteAddr].URL_Path[request.URL.Path])
+    if clients[request.RemoteAddr].URL_Path[request.URL.Path] == 5 {
+        // cuando vuelvo el count a 0? necesito un timer
+        // me gustaria que para la 6ta le ponga un timer mas grande antes de devolver el mensaje
+        fmt.Fprintf(writer, "Muchas requests para esta url, intente mas tarde.")
+        return errors.New(fmt.Sprintf("Hola, soy un mensaje de error poco claro."))
+    } else {
+        clients[request.RemoteAddr].URL_Path[request.URL.Path] ++
+    }
+
     fmt.Println(client_data)
-    fmt.Println(my_count)
 
     return nil
 }
