@@ -102,8 +102,6 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
 		return nil // no existia, no hay restricciones
 	}
 
-	fmt.Println(clients[request.RemoteAddr].URL_Path[request.URL.Path])
-
     // si deja pasar 60 segundos entre llamadas, se resetea el counter y se pisa la fecha
     if reset_counter(clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Time, request_time) {
         mutex.Lock()
@@ -132,7 +130,7 @@ func reset_counter(struct_time string, request_time string) bool { // si paso ma
     const date_format = "Mon Jan  2 15:04:05 -07 2006"
     first_time, _ := time.Parse(date_format, struct_time)
     last_time, _ := time.Parse(date_format, request_time)
-    if int64(last_time.Sub(first_time)/time.Second) < 60 { //si intentaste en menos de 60 segundos 
+    if int64(last_time.Sub(first_time)/time.Second) < 15 { //lo pongo en 15 para testear rapido 
         fmt.Println("false")
         return false
     } else {
