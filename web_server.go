@@ -105,9 +105,11 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
 	fmt.Println(clients[request.RemoteAddr].URL_Path[request.URL.Path])
 
     // si deja pasar 60 segundos entre llamadas, se resetea el counter y se pisa la fecha
-/*    if reset_counter(clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Time) {
+    if reset_counter(clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Time) {
+        mutex.Lock()
         clients[request.RemoteAddr].URL_Path[request.URL.Path] = Restrict{0, request_time}
-    }*/
+        mutex.Unlock()
+    }
 
 	if clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Count == 5 {
 		// me gustaria que para la 6ta le ponga un timer mas grande antes de devolver el mensaje
@@ -117,7 +119,6 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
         modified_strict := Restrict{
             clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Count + 1, 
             clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Time}
-        fmt.Println(modified_strict)    
         mutex.Lock()
 		clients[request.RemoteAddr].URL_Path[request.URL.Path] = modified_strict
         mutex.Unlock()
@@ -128,10 +129,15 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
 }
 
 func reset_counter(struct_time string) bool { // si paso mas de t tiempo entre las fechas, true
-    first_time, _ := http.ParseTime(struct_time)
+    const date_format = "Mon Jan  2 15:04:05 -07 2006"
+    first_time, _ := time.Parse(date_format, struct_time)
+    fmt.Println("struct_time:", struct_time)
+    fmt.Println("first_time:", first_time)
     if time.Since(first_time) < 60 { //si intentaste en menos de 60 segundos 
+        fmt.Println("false")
         return false
     }
+    fmt.Println("true")
     return true
 }
 
