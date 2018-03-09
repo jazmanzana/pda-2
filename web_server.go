@@ -90,6 +90,8 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
         return nil // no existia, no hay restricciones
     }
 
+    clients[request.RemoteAddr].URL_Path[request.URL.Path] ++
+    
     fmt.Println(client_data)
     fmt.Println(my_count)
 
