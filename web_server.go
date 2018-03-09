@@ -104,22 +104,22 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
 
 	fmt.Println(clients[request.RemoteAddr].URL_Path[request.URL.Path])
 
-    // si deja pasar 60 segundos entre llamadas, se resetea el counter
-    if reset_counter(clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Time) {
+    // si deja pasar 60 segundos entre llamadas, se resetea el counter y se pisa la fecha
+/*    if reset_counter(clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Time) {
         clients[request.RemoteAddr].URL_Path[request.URL.Path] = Restrict{0, request_time}
-    }
+    }*/
 
 	if clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Count == 5 {
 		// me gustaria que para la 6ta le ponga un timer mas grande antes de devolver el mensaje
-
-		fmt.Fprintf(writer, "Muchas requests para esta url, intente mas tarde.")
+		fmt.Fprintf(writer, "Muchas requests en poco tiempo para esta url, intente mas tarde.")
 		return errors.New(fmt.Sprintf("Hola, soy un mensaje de error poco claro."))
 	} else {
+        modified_strict := Restrict{
+            clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Count + 1, 
+            clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Time}
+        fmt.Println(modified_strict)    
         mutex.Lock()
-
-        fmt.Println("ASDF") //no hay count por ahora x(
-		//clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Count ++
-
+		clients[request.RemoteAddr].URL_Path[request.URL.Path] = modified_strict
         mutex.Unlock()
 	}
 	fmt.Println(client_data)
