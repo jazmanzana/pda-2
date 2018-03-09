@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -79,46 +80,48 @@ func handler(writer http.ResponseWriter, request *http.Request) {
 func request_restrictions(writer http.ResponseWriter, request *http.Request) error { //usar mutex aca para que bloquee
 	var mutex = &sync.Mutex{} // para que clients sea modificado de a un client por vez
 	request_time := time.Now().Format(time.UnixDate)
+	client_ip, _, _ := net.SplitHostPort(request.RemoteAddr)
+	requested_url := request.URL.Path
 
-	client_data, ok := clients[request.RemoteAddr]
+	client_data, ok := clients[client_ip]
 	if !ok { // si no lo encuentra, lo crea
 		mutex.Lock()
-		clients[request.RemoteAddr] = &Client{ //hacer que el key no tenga el puerto
-			Remote_Addr: request.RemoteAddr,
+		clients[client_ip] = &Client{ //hacer que el key no tenga el puerto
+			Remote_Addr: client_ip,
 			URL_Path:    make(map[string]Restrict)}
 
-		clients[request.RemoteAddr].URL_Path[request.URL.Path] = Restrict{1, request_time} //inicializa el path y pone el counter en 1
+		clients[client_ip].URL_Path[requested_url] = Restrict{1, request_time} //inicializa el path y pone el counter en 1
 		mutex.Unlock()
 		fmt.Println("Client no existia.")
 		return nil // si no existia no hay restricciones
 	}
 
-	_, ok = clients[request.RemoteAddr].URL_Path[request.URL.Path]
+	_, ok = clients[client_ip].URL_Path[requested_url]
 	if !ok { // si mi path no existe en mi client, lo crea
 		mutex.Lock()
-		clients[request.RemoteAddr].URL_Path[request.URL.Path] = Restrict{1, request_time}
+		clients[client_ip].URL_Path[requested_url] = Restrict{1, request_time}
 		mutex.Unlock()
 		fmt.Println("URL_Path no existia.")
 		return nil // no existia, no hay restricciones
 	}
 
 	// si deja pasar 60 segundos entre llamadas, se resetea el counter y se pisa la fecha
-	if reset_counter(clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Time, request_time) {
+	if reset_counter(clients[client_ip].URL_Path[requested_url].URL_Time, request_time) {
 		mutex.Lock()
-		clients[request.RemoteAddr].URL_Path[request.URL.Path] = Restrict{0, request_time}
+		clients[client_ip].URL_Path[requested_url] = Restrict{0, request_time}
 		mutex.Unlock()
 	}
 
-	if clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Count == 5 {
+	if clients[client_ip].URL_Path[requested_url].URL_Count == 5 {
 		// me gustaria que para la 6ta le ponga un timer mas grande antes de devolver el mensaje
 		fmt.Fprintf(writer, "Muchas requests en poco tiempo para esta url, intente mas tarde.")
 		return errors.New(fmt.Sprintf("Hola, soy un mensaje de error poco claro."))
 	} else {
-        mutex.Lock()
+		mutex.Lock()
 		modified_strict := Restrict{
-			clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Count + 1,
-			clients[request.RemoteAddr].URL_Path[request.URL.Path].URL_Time}
-		clients[request.RemoteAddr].URL_Path[request.URL.Path] = modified_strict
+			clients[client_ip].URL_Path[requested_url].URL_Count + 1,
+			clients[client_ip].URL_Path[requested_url].URL_Time}
+		clients[client_ip].URL_Path[requested_url] = modified_strict
 		mutex.Unlock()
 	}
 	fmt.Println(client_data)
@@ -131,10 +134,8 @@ func reset_counter(struct_time string, request_time string) bool { // si paso ma
 	first_time, _ := time.Parse(date_format, struct_time)
 	last_time, _ := time.Parse(date_format, request_time)
 	if int64(last_time.Sub(first_time)/time.Second) < 15 { //lo pongo en 15 para testear rapido
-		fmt.Println("false")
 		return false
 	} else {
-		fmt.Println("true")
 		return true
 	}
 }
