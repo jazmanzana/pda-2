@@ -10,10 +10,16 @@ import (
 	"strings"
 )
 
+    
+type client struct {
+    RemoteAddr string //ip del chabon
+    UrlPath string 
+    Counter int 
+}
+
 func main() {
 	http.HandleFunc("/", handler)
 	log.Fatal(http.ListenAndServe("0.0.0.0:8000", nil))
-
 }
 
 // You need to specify what you will return after specifying the input parameters, this is not python.
@@ -29,7 +35,6 @@ func fetch(url string, writer http.ResponseWriter) {
 	if err != nil {
 		fmt.Println("While reading %s: %v", url, err)
 	}
-	//fmt.Println("Esto vendria a ser lo que recibimos: %d de la url %s", nbytes, url)
 	writer.Write(body_bytes)
 	resp.Body.Close() // "dont leak resources"
 
