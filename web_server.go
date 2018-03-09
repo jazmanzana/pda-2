@@ -99,11 +99,13 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
 	_, ok = clients[client_ip].URL_Path[requested_url]
 	if !ok { // si mi path no existe en mi client, lo crea
 		mutex.Lock()
+		clients[client_ip].IP_Count ++
 		clients[client_ip].URL_Path[requested_url] = Restrict{1, request_time}
 		mutex.Unlock()
 		fmt.Println("URL_Path no existia.")
 		return nil // no existia, no hay restricciones
 	}
+
 
 	// si deja pasar 60 segundos entre llamadas, se resetea el counter y se pisa la fecha
 	if reset_counter(clients[client_ip].URL_Path[requested_url].URL_Time, request_time) {
@@ -118,6 +120,7 @@ func request_restrictions(writer http.ResponseWriter, request *http.Request) err
 		return errors.New(fmt.Sprintf("Hola, soy un mensaje de error poco claro."))
 	} else {
 		mutex.Lock()
+		clients[client_ip].IP_Count ++
 		modified_strict := Restrict{
 			clients[client_ip].URL_Path[requested_url].URL_Count + 1,
 			clients[client_ip].URL_Path[requested_url].URL_Time}
